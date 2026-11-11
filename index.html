@@ -2,8 +2,12 @@
 <html lang="ja">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, viewport-fit=cover">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
 <meta name="theme-color" content="#000000">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black">
+<meta name="apple-mobile-web-app-title" content="寄せ計算">
 <title>アプローチ＆パット計算</title>
 <style>
   :root{
@@ -288,6 +292,37 @@
   .base-grid .cl{font-size:15px;font-weight:900}
   .base-grid .cl small{display:block;font-size:10px;color:var(--sub);font-weight:700}
   .ver{text-align:center;font-size:11px;color:var(--sub)}
+
+  /* ---------- v1.2.0 並び：上＝設定・タブ・入力、下＝結果。画面は固定して動かさない ---------- */
+  html,body{height:100%;overflow:hidden;overscroll-behavior:none}
+  body{position:fixed;inset:0;width:100%}
+  .app{height:100%;min-height:0;overflow:hidden}
+  .app > .footer{order:-2}
+  .app > .tabs{order:-1;flex:none}
+  .footer{border-top:none;border-bottom:1px solid var(--line);padding-top:0;padding-bottom:clamp(4px,.8dvh,6px);flex:none}
+  .pane{flex:1 1 0;min-height:0}
+  .pane > section{flex:none}
+  .pane > .result{order:9;flex:1 1 0;min-height:0}
+  .result .stance-wrap{flex:1 1 0;min-height:0;display:flex;align-items:center}
+  .result .stance-svg{width:100%;height:100%;max-height:none}
+  .slope{flex:none;grid-template-rows:auto auto}
+  .sbtn{min-height:clamp(38px,5.4dvh,48px)}
+  .slope .flatb{min-height:0}
+  .sbtn .name br{display:none}
+  .sbtn .name{white-space:nowrap}
+  .virtual .num{font-size:clamp(38px,7dvh,76px)}
+  .takeback .num{font-size:clamp(28px,4.8dvh,46px)}
+  .step-btn{height:clamp(40px,6dvh,60px)}
+  #distInput{font-size:clamp(28px,4.4dvh,44px)}
+  .xbtn{min-height:clamp(38px,5.4dvh,54px)}
+  .xbtn .name{white-space:nowrap;font-size:clamp(14px,2.1dvh,17px)}
+  .assist{font-size:clamp(13px,1.9dvh,15px)}
+  .fine button,.dir-toggle button{min-height:clamp(36px,5.2dvh,42px)}
+  .tabs button{min-height:clamp(30px,4.4dvh,36px)}
+  /* 設定は上から出す */
+  .modal{align-items:flex-start}
+  .sheet{border-radius:0 0 18px 18px;border-top:none;border-bottom:1px solid var(--line);
+         padding:max(14px,env(safe-area-inset-top)) 14px 16px;touch-action:pan-y;overscroll-behavior:contain}
 </style>
 </head>
 <body>
@@ -535,7 +570,7 @@
         <button id="setReset">初期値に戻す</button>
         <button id="setDone">完了</button>
       </div>
-      <div class="ver">バージョン 1.1.1</div>
+      <div class="ver">バージョン 1.2.0</div>
     </div>
   </div>
 </main>
@@ -1080,6 +1115,18 @@
     applyTab();
   }));
   applyTab();
+
+  // ===== 画面を固定（指で触っても画面が動かない・拡大しない） =====
+  document.addEventListener('touchmove', e => {
+    if (!e.target.closest('.sheet') || e.touches.length > 1) e.preventDefault();
+  }, { passive: false });
+  ['gesturestart', 'gesturechange'].forEach(ev => document.addEventListener(ev, e => e.preventDefault()));
+  let lastTouchEnd = 0;   // ダブルタップでの拡大を防ぐ（ボタン連打は通す）
+  document.addEventListener('touchend', e => {
+    const now = Date.now();
+    if (now - lastTouchEnd < 300 && !e.target.closest('button, input')) e.preventDefault();
+    lastTouchEnd = now;
+  }, { passive: false });
 
   applyHand();
   render();
