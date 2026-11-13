@@ -429,25 +429,25 @@
     </div>
     <div class="stance-wrap">
       <!-- 1単位 = 1cm。x=0 がボール中心、右（+）がバックスイング方向 -->
-      <svg class="stance-svg" viewBox="-34 -10 78 28" aria-label="テークバックのアニメーション">
+      <svg class="stance-svg" viewBox="-36 -8.5 102 22.5" aria-label="テークバックのアニメーション">
         <!-- 右打ち基準で描画。左打ちのときはこのグループごと左右反転する -->
         <g id="mirror">
         <g id="ticks"></g>
         <!-- ボールの線（ターゲットライン） -->
-        <line x1="-34" y1="0" x2="44" y2="0" stroke="#2f3338" stroke-width=".35" stroke-dasharray="1.2 1"/>
+        <line x1="-36" y1="0" x2="66" y2="0" stroke="#2f3338" stroke-width=".35" stroke-dasharray="1.2 1"/>
         <!-- 足（スタンス幅 約53cm：右足外側 = 26.5cm） -->
         <rect x="-27" y="5.5" width="6.5" height="16" rx="3" fill="#24272c" stroke="#5a6068" stroke-width=".35"/>
         <rect x="20.5" y="5.5" width="6.5" height="16" rx="3" fill="#24272c" stroke="#5a6068" stroke-width=".35"/>
-        <text id="footFront" x="-23.75" y="12.5" font-size="2.6" fill="#a9b0b8" text-anchor="middle">左足</text>
-        <text id="footBack" x="23.75" y="12.5" font-size="2.6" fill="#a9b0b8" text-anchor="middle">右足</text>
-        <text id="cupText" x="-27" y="-6" font-size="2.4" fill="#a9b0b8" text-anchor="middle">◀ カップ</text>
+        <text id="footFront" x="-23.75" y="12.3" font-size="3" fill="#a9b0b8" text-anchor="middle">左足</text>
+        <text id="footBack" x="23.75" y="12.3" font-size="3" fill="#a9b0b8" text-anchor="middle">右足</text>
+        <text id="cupText" x="-27" y="-5" font-size="3" fill="#a9b0b8" text-anchor="middle">◀ カップ</text>
         <!-- 5m基準（25cm） -->
         <line x1="25" y1="-6.5" x2="25" y2="3.5" stroke="#ffe14a" stroke-width=".35" stroke-dasharray=".8 .6" opacity=".7"/>
         <text x="25" y="-7.3" font-size="2.2" fill="#ffe14a" text-anchor="middle" opacity=".8">★</text>
         <!-- 今回の振り幅 -->
         <g id="targetMark">
           <line id="tmLine" x1="25" y1="-5" x2="25" y2="4.5" stroke="#39ff88" stroke-width=".55"/>
-          <text id="tmText" x="25" y="8.6" font-size="3" fill="#39ff88" text-anchor="middle">25.0cm</text>
+          <text id="tmText" x="25" y="8.8" font-size="3.6" fill="#39ff88" text-anchor="middle">25.0cm</text>
         </g>
         <!-- 振り幅の範囲 -->
         <line id="rangeLine" x1="0" y1="-3.6" x2="25" y2="-3.6" stroke="#39ff88" stroke-width=".35" opacity=".45"/>
@@ -472,7 +472,7 @@
   <section class="distance">
     <button class="step-btn" id="minusBtn" aria-label="距離を減らす">−</button>
     <div class="dist-center">
-      <div class="label">カップまで</div>
+      <div class="label" style="white-space:nowrap">カップまで <span id="distYd">（約5.5y）</span></div>
       <div class="dist-input-wrap">
         <input id="distInput" type="number" inputmode="decimal" step="0.1" min="0.5" max="50" value="5">
         <span class="dist-unit">m</span>
@@ -570,7 +570,7 @@
         <button id="setReset">初期値に戻す</button>
         <button id="setDone">完了</button>
       </div>
-      <div class="ver">バージョン 1.2.0</div>
+      <div class="ver">バージョン 1.2.1</div>
     </div>
   </div>
 </main>
@@ -643,6 +643,7 @@
     const v = virtualDistance(state.dist, state.k);
     const cm = round1(takeback(v * BASE_STIMP / cfg.stimp));
     $('virtualOut').textContent = round1(v).toFixed(1);
+    $('distYd').textContent = `（約${round1(state.dist / 0.9144).toFixed(1)}y）`;
     $('takebackOut').textContent = cm.toFixed(1);
     const back = state.hand === 'left' ? '左足' : '右足';
     $('assistOut').textContent = assistText(cm).replace(/右足/g, back);
@@ -694,14 +695,14 @@
   });
 
   // ===== ストローク図（目盛り・振り幅表示） =====
-  const SVG_MAX_X = 42;   // 図に収まる右端(cm)
+  const SVG_MAX_X = 63;   // 図に収まる右端(cm)。25y（約23m）の約54cmまで入る
   (function drawTicks(){
     const g = $('ticks');
     let html = '';
-    for (let x = -30; x <= 40; x += 5){
+    for (let x = -30; x <= 60; x += 5){
       const major = x % 10 === 0;
       html += `<line x1="${x}" y1="-1.4" x2="${x}" y2="${major ? 1.8 : 1}" stroke="#3a3f46" stroke-width="${major ? .3 : .2}"/>`;
-      if (major && x > 0) html += `<text x="${x}" y="4" font-size="2" fill="#5d646c" text-anchor="middle">${x}</text>`;
+      if (major && x > 0) html += `<text x="${x}" y="4" font-size="2.8" fill="#7d858e" text-anchor="middle">${x}</text>`;
     }
     g.innerHTML = html;
   })();
@@ -713,7 +714,7 @@
   }
   function applyHand(){
     const L = state.hand === 'left';
-    $('mirror').setAttribute('transform', L ? 'translate(10 0) scale(-1 1)' : '');
+    $('mirror').setAttribute('transform', L ? 'translate(30 0) scale(-1 1)' : '');
     $('footBack').textContent  = L ? '左足' : '右足';
     $('footFront').textContent = L ? '右足' : '左足';
     $('cupText').textContent   = L ? 'カップ ▶' : '◀ カップ';
