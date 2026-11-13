@@ -570,7 +570,7 @@
         <button id="setReset">初期値に戻す</button>
         <button id="setDone">完了</button>
       </div>
-      <div class="ver">バージョン 1.2.1</div>
+      <div class="ver">バージョン 1.2.2</div>
     </div>
   </div>
 </main>
@@ -588,11 +588,11 @@
   // ===== 設定（グリーンスピード・テンポ） =====
   // アプローチ用クラブ（キャリー:ラン は 平ら・9.75ft での比率。ratio = ラン ÷ キャリー）
   const CLUBS = [
-    { id: 'c58', name: '58°', sub: 'ウェッジ', cr: '3:1', ratio: 1 / 3 },
-    { id: 'c54', name: '54°', sub: 'ウェッジ', cr: '2:1', ratio: 1 / 2 },
-    { id: 'cUW', name: 'UW',  sub: '50°',      cr: '1:1', ratio: 1 },
-    { id: 'cPW', name: 'PW',  sub: '45°',      cr: '1:2', ratio: 2 },
-    { id: 'c9I', name: '9I',  sub: '40°',      cr: '1:3', ratio: 3 },
+    { id: 'c58', name: '58°', sub: 'ウェッジ', cr: '3:1', ratio: 1 / 3, loft: 58 },
+    { id: 'c54', name: '54°', sub: 'ウェッジ', cr: '2:1', ratio: 1 / 2, loft: 54 },
+    { id: 'cUW', name: 'UW',  sub: '50°',      cr: '1:1', ratio: 1, loft: 50 },
+    { id: 'cPW', name: 'PW',  sub: '45°',      cr: '1:2', ratio: 2, loft: 45 },
+    { id: 'c9I', name: '9I',  sub: '40°',      cr: '1:3', ratio: 3, loft: 40 },
   ];
   const DEFAULTS = { stimp: 9.75, bpm: 75, margin: 2, c58: 20, c54: 24, cUW: 28, cPW: 32, c9I: 36 };
   const LIMITS = { stimp: [6, 14], bpm: [50, 120], margin: [0, 6],
@@ -753,6 +753,8 @@
   //   拍1の頭：テークバック開始（2/3拍）→ 切り返し → ダウン（1/3拍）→ 拍2の頭でインパクト
   //   拍2〜3：フォロー・ボールが転がる・ヘッドが戻る → 次の拍1で再びテークバック
   const BALL_R = 2.13;
+  const PUTT_SMASH = 1.4;   // ボール初速 ÷ ヘッド速度（パター）
+  const APP_SMASH = 1.3;    // ボール初速 ÷ ヘッド速度（ウェッジ・アイアンの小さな振り幅）
   const ease = p => 0.5 - 0.5 * Math.cos(Math.PI * p);   // 往復の自然な減速
   const accel = p => p * p;                                // ダウンは加速
   const decel = p => 1 - (1 - p) * (1 - p);
@@ -764,7 +766,7 @@
     if (cfg.bpm !== lastBpm){ t0 = now; lastBpm = cfg.bpm; }   // テンポ変更時は拍1からやり直し
     const BEAT = 60000 / cfg.bpm;
     const T_BACK = BEAT * 2 / 3, T_DOWN = BEAT / 3;
-    const T_FOLLOW = BEAT * 0.35, T_ROLL = BEAT * 1.1, T_RESET = BEAT * 0.5;
+    const T_ROLL = BEAT * 1.1, T_RESET = BEAT * 0.5;
     const CYCLE = BEAT * 3;
 
     const A = Math.min(swingCm, SVG_MAX_X);   // フェース位置(ボール中心からcm)
@@ -781,11 +783,23 @@
       face = A - (A - face0) * accel(t / T_DOWN);
     } else {
       t -= T_DOWN;   // ここが拍2（インパクト）
-      const followEnd = face0 - A * 0.5;
-      face = face0 + (followEnd - face0) * decel(Math.min(1, t / T_FOLLOW));
-      const rp = Math.min(1, t / T_ROLL);
-      bx = -30 * decel(rp);
-      bop = rp > .6 ? 1 - (rp - .6) / .4 : 1;
+      // インパクト時のヘッド速度（図の単位 = cm / ms）。ダウンは p² で加速するので 終速 = 2 × 距離 ÷ 時間
+      const vh = Math.max(2 * (A - face0) / T_DOWN, 1e-4);
+      // ボールの初速 = ヘッド速度 × PUTT_SMASH（振り幅が大きい＝上り・遠いほど速く出る）
+      const v0 = vh * PUTT_SMASH;
+      // 減速は「実際の距離で止まる」ように決める：上りは同じ初速でも早く止まり、下りは長く転がる
+      const dCm = state.dist * 100;
+      const aRoll = v0 * v0 / (2 * dCm);
+      const tStop = v0 / aRoll;
+      const tt = Math.min(t, tStop);
+      const s = v0 * tt - aRoll * tt * tt / 2;          // ボールが進んだ距離(cm)
+      bx = -s;
+      bop = s < 24 ? 1 : Math.max(0, 1 - (s - 24) / 10);  // 図の端（約34cm）で消える
+      // フォローはインパクトの速さのまま減速（速さがつながる）
+      const Fh = A * 0.5;
+      const followEnd = face0 - Fh;
+      face = face0 - Fh * decel(Math.min(1, t / (2 * Fh / vh)));
+      if (bop > 0) face = Math.max(face, bx + BALL_R);   // ヘッドがボールを追い越さない
       if (t > T_ROLL){
         const bp = Math.min(1, (t - T_ROLL) / T_RESET);
         face = followEnd + (face0 - followEnd) * ease(bp);
@@ -945,7 +959,7 @@
              assist: `手元を${a.n}と${b.n}の間（${near}寄り）まで上げ、同じだけ振り抜く` };
   }
 
-  let aAngle = 60;   // 図の振り上げ角(度)
+  let aAngle = 60, aLoft = 54;   // 図の振り上げ角(度)・使うクラブのロフト
   function renderApproach(){
     const P = aState.pin, E = aState.edge, L = E + cfg.margin;
     const res = CLUBS.map(c => calcClub(c, P));
@@ -982,6 +996,7 @@
     $('aSwingSub').textContent = (sw.sub ? sw.sub + '・' : '') + `腰〜腰の${Math.round(x * 100)}%`;
     $('aAssist').textContent = sw.assist;
     aAngle = Math.max(8, Math.min(140, x * DEG_PER_X));
+    aLoft = pick.c.loft;
     setATarget(aAngle);
 
     // 落とし所・注意
@@ -1029,18 +1044,29 @@
   const aClubG = $('aClubG'), aBall = $('aBall');
   function aFrame(tc, BEAT){
     if (state.tab !== 'approach') return;
-    const T_BACK = BEAT * 2 / 3, T_DOWN = BEAT / 3, T_FOLLOW = BEAT * 0.4, T_FLY = BEAT * 1.1, T_RESET = BEAT * 0.5;
-    const A = aAngle;
+    const T_BACK = BEAT * 2 / 3, T_DOWN = BEAT / 3, T_FLY = BEAT * 1.1, T_RESET = BEAT * 0.5;
+    const A = aAngle, A_HEAD_R = 47;   // 支点からヘッドまでの長さ（図の単位）
     let t = tc, ang = 0, bx = 0, by = 58.5, bop = 1;
     if (reduced){ ang = A; }
     else if (t < T_BACK){ ang = A * ease(t / T_BACK); }
     else if ((t -= T_BACK) < T_DOWN){ ang = A * (1 - accel(t / T_DOWN)); }
     else {
       t -= T_DOWN;
-      ang = -A * decel(Math.min(1, t / T_FOLLOW));
-      const p = Math.min(1, t / T_FLY);
-      bx = -64 * p; by = 58.5 - 34 * Math.sin(Math.PI * Math.min(1, p * 1.15));
-      bop = p > .7 ? 1 - (p - .7) / .3 : 1;
+      // フォローはインパクトの角速度のまま減速（速さがつながる）
+      ang = -A * decel(Math.min(1, t / T_DOWN));
+      // ヘッド速度 = 半径 × 角速度。ボール初速 = ヘッド速度 × APP_SMASH（振り幅が大きいほど速く出る）
+      const omega = 2 * (A * Math.PI / 180) / T_DOWN;       // rad / ms
+      const v0 = A_HEAD_R * omega * APP_SMASH;
+      const L = aLoft * 0.75 * Math.PI / 180;                // 打ち出し角 ≒ ロフトの3/4
+      const vx = v0 * Math.cos(L), vy = v0 * Math.sin(L);
+      const gA = vy / (BEAT * 0.45);                         // 図の中で山なりに見える重力
+      bx = -vx * t;
+      by = 58.5 - (vy * t - gA * t * t / 2);
+      const tLand = 2 * vy / gA;
+      if (t > tLand) by = 58.5;
+      // 図の端（左右）・上の端・着地のあとで消える
+      const out = Math.max((-bx - 44) / 10, (-10 - by) / 8, t > tLand ? (t - tLand) / (BEAT * 0.2) : 0);
+      bop = Math.max(0, Math.min(1, 1 - out));
       if (t > T_FLY){
         const q = Math.min(1, (t - T_FLY) / T_RESET);
         ang = -A + A * ease(q);
