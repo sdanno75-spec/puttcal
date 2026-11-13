@@ -721,7 +721,7 @@
         <button id="setReset">初期値に戻す</button>
         <button id="setDone">完了</button>
       </div>
-      <div class="ver">バージョン 1.8.0</div>
+      <div class="ver">バージョン 1.8.1</div>
     </div>
   </div>
 </main>
@@ -903,6 +903,7 @@
       try { localStorage.setItem('apc-hand', state.hand); } catch(e){}
       applyHand();
       render();
+      if (typeof drawTipSettings === 'function') drawTipSettings();
     });
   });
 
@@ -1723,7 +1724,7 @@
     fwBunker: { name: 'フェアウェイバンカー', items: [
       'アドレスで作った手首の角度を、最後までほどかない（ほどけるとダフる）',
       'ヘッドは砂につけず、少し浮かせて構える。素振りも浮かせたまま',
-      'ボールはふだんよりやや右、グリップは少し短く、足は軽く砂に埋める',
+      'ボールはふだんよりやや{後ろ足}寄り、グリップは少し短く、足は軽く砂に埋める',
       'ハードルを下げる：アゴを越える番手で、目いっぱい飛ばそうとしない',
     ] },
     greenBunker: { name: 'グリーン周りのバンカー', items: [
@@ -1756,7 +1757,9 @@
     return `<div class="hd">気を付けること（${TIPS[cat].name}）</div>` +
       list.map(t => '<div>・' + esc(t) + '</div>').join('') + '<div style="height:6px"></div>';
   }
-  const esc = t => String(t).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
+  // {後ろ足} は利き手で読みかえる（左打ち＝左足、右打ち＝右足）
+  const handText = t => String(t).replace(/{後ろ足}/g, state.hand === 'left' ? '左足' : '右足');
+  const esc = t => handText(t).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
   // 設定画面のチェックリスト
   function drawTipSettings(){
     $('tipGrid').innerHTML = Object.entries(TIPS).map(([cat, c]) => {
