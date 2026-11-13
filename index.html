@@ -298,6 +298,22 @@
   .c-course{display:grid;grid-template-columns:1.4fr 1fr auto;gap:6px}
   .c-next{min-width:58px;border-radius:10px;border:1px solid var(--yellow);background:var(--yellow);color:#000;font-family:inherit;font-weight:900;font-size:14px}
   .c-next:disabled{background:var(--panel2);border-color:#33373d;color:#5d646c}
+  .c-course{grid-template-columns:1.4fr 1fr auto}
+  .c-map{min-width:44px;background:#fff;border-color:#fff}
+  .map-sheet{
+    width:100%;max-width:520px;background:#0b0f0c;border:1px solid var(--line);border-top:none;
+    border-radius:0 0 18px 18px;padding:max(10px,env(safe-area-inset-top)) 12px 12px;
+    display:flex;flex-direction:column;gap:6px;max-height:100dvh;
+  }
+  .map-sheet h2{font-size:17px;font-weight:900;display:flex;justify-content:space-between;align-items:center}
+  .map-sheet h2 button{border:none;background:transparent;color:var(--sub);font-size:28px;line-height:1;padding:0 6px}
+  .map-svg{display:block;width:100%;height:72dvh}
+  .map-svg text{font-family:inherit;font-weight:800}
+  .map-legend{display:flex;flex-wrap:wrap;gap:4px 12px;font-size:11px;font-weight:700;color:var(--sub)}
+  .map-legend .lg{display:inline-block;width:12px;height:9px;border-radius:3px;margin-right:4px;vertical-align:-1px}
+  .lg.fw{background:#2f6e3c}.lg.bk{background:#d9cfa6}.lg.wt{background:#2b6fa8}
+  .lg.tg{background:var(--yellow);border-radius:50%}.lg.dp{border:1.5px dashed var(--yellow);background:transparent}
+  .map-note{font-size:10.5px;color:#7d858e}
   .c-prob{background:#0b0c0d;border:1px solid #23262b;border-radius:10px;padding:4px 6px}
   .c-prob .ph{font-size:10.5px;font-weight:800;color:var(--sub);margin-bottom:2px}
   .c-prob table{width:100%;border-collapse:collapse;font-size:clamp(11.5px,1.8dvh,13px);font-weight:800;text-align:center}
@@ -681,7 +697,7 @@
         <button id="setReset">初期値に戻す</button>
         <button id="setDone">完了</button>
       </div>
-      <div class="ver">バージョン 1.4.0</div>
+      <div class="ver">バージョン 1.6.1</div>
     </div>
   </div>
 </main>
@@ -1277,6 +1293,62 @@
     //   { no: 1, par: 4, yd: 360, tee: 'none', green: 'bunker', memo: '右OB' },
     // ] },
   ];
+  // 都ゴルフ倶楽部（山梨県都留市）楽天GORAのコース情報より（2026-11-13）。ハザードはまだ未入力
+  (() => {
+    const PAR  = [4, 3, 5, 4, 4, 3, 5, 4, 4,  4, 5, 4, 4, 3, 4, 4, 5, 3];
+    const HDCP = [9, 15, 3, 1, 13, 7, 5, 17, 11,  10, 4, 16, 8, 14, 2, 12, 6, 18];
+    const TEES = {
+      'レギュラー': [405, 154, 490, 395, 390, 198, 550, 386, 337,  381, 459, 315, 313, 177, 361, 382, 551, 151],
+      'フロント':   [358, 138, 452, 372, 374, 178, 487, 366, 308,  357, 426, 268, 295, 155, 336, 354, 427, 122],
+      'バック':     [424, 177, 510, 415, 416, 220, 576, 412, 361,  407, 488, 315, 341, 198, 361, 404, 560, 177],
+      'レディース': [320, 110, 415, 326, 341, 156, 435, 329, 276,  331, 400, 248, 278, 128, 287, 321, 411, 104],
+    };
+    // レイアウト図を見て読み取ったハザード（読み取ったホールだけ）
+    const HAZ = {
+      1: { tee: 'bunker', green: 'bunker', memo: '右は林、FW中央にバンカー、グリーン右手前にバンカー' },
+    };
+    for (const [tee, yds] of Object.entries(TEES))
+      COURSES.push({ name: `都GC ${tee}`, key: 'miyako', tee, holes: PAR.map((par, i) => ({
+        no: i + 1, par, yd: yds[i], tee: 'none', green: 'none',
+        ...(HAZ[i + 1] || {}),
+        memo: `${i < 9 ? 'OUT' : 'IN'}・HDCP${HDCP[i]}` + (HAZ[i + 1] ? '・' + HAZ[i + 1].memo : '') })) });
+  })();
+
+  // ----- ホールの線画（レイアウト図を見て、ヤード単位で描き起こしたもの） -----
+  //  座標はティー＝(0,0)、上（グリーン方向）が +y、右が +x。単位はヤード（約）
+  //  path: フェアウェイの中心線 / fw: フェアウェイ幅 / green: [x, y, 横半径, 縦半径]
+  //  bunkers: [x, y, 半径] / water: [x, y, 幅, 高さ] / trees: 林の側（'right' / 'left'）
+  //  距離はティーによって違うので、描くときに中心線の長さ＝そのティーの距離 に合わせて伸び縮みさせる
+  const MAPS = {
+    miyako: {
+      1: {
+        path: [[0, 0], [-33, 106], [-60, 186], [-66, 266], [-46, 346], [-16, 405]],
+        fw: 40, green: [-16, 405, 13, 16],
+        bunkers: [[-60, 246, 9], [-113, 293, 8], [-3, 383, 6]],
+        water: [[-6, -22, 30, 7]],
+        trees: 'right',
+      },
+    },
+  };
+  // 図があるホールは「ティーから中心線上のFWバンカーまでの距離」を求めて h.hazAt に入れる（ティーの距離で伸び縮み）
+  COURSES.forEach(course => course.holes.forEach(h => {
+    const m = MAPS[course.key] && MAPS[course.key][h.no];
+    if (!m) return;
+    let L = 0; const acc = [0];
+    for (let i = 1; i < m.path.length; i++){ L += Math.hypot(m.path[i][0] - m.path[i - 1][0], m.path[i][1] - m.path[i - 1][1]); acc.push(L); }
+    const k = h.yd / L;
+    let best = 0;
+    m.bunkers.forEach(([bx, by]) => {
+      for (let i = 1; i < m.path.length; i++){
+        const [x0, y0] = m.path[i - 1], [x1, y1] = m.path[i];
+        const l = acc[i] - acc[i - 1], t = Math.max(0, Math.min(1, ((bx - x0) * (x1 - x0) + (by - y0) * (y1 - y0)) / (l * l)));
+        const off = Math.hypot(x0 + (x1 - x0) * t - bx, y0 + (y1 - y0) * t - by);
+        const d = (acc[i - 1] + l * t) * k;
+        if (off <= m.fw / 2 + 4 && d >= 150 && d <= 280 && (!best || Math.abs(d - 215) < Math.abs(best - 215))) best = Math.round(d);
+      }
+    });
+    if (best) h.hazAt = best;
+  }));
 
   const D = id => cfg['d' + id];
   const NM = id => (CC.find(c => c.id === id) || {}).name || id;
@@ -1369,6 +1441,12 @@
         const c = fitGreen(rem);
         return R(c, rem, true, 'グリーン中央', `グリーン中央へ。外れても花道ならボギー以内。`);
       }
+      // 図から分かるFWバンカーまでの距離：1Wが届いてしまうなら、手前で止まるショートウッド
+      if (s.hazAt && s.haz !== 'none' && Math.abs(D('1W') - s.hazAt) < 25){
+        const c = longestUnder(s.hazAt - 20, ['7W', '9W']) || longestUnder(s.hazAt - 20, SHORT_FIRST) || '9W';
+        return R(c, D(c), false, `FWバンカー（約${s.hazAt}y）の手前のフェアウェイ`,
+          `1Wだと約${s.hazAt}yのFWバンカーに届く。${LABEL(c)}で${D(c)}y、手前で止める。残り${after(D(c))}y。`);
+      }
       if (s.haz === 'water'){
         return R('7W', D('7W'), false, '池・OBの手前の広いフェアウェイ',
           `1Wの落とし所に池・OBがあるので7Wで${D('7W')}y。届かない距離で止める。残り${after(D('7W'))}y。`);
@@ -1425,7 +1503,7 @@
   // ホールの攻め方（ティーからボギーオンまでを順に計算）
   function planHole(h){
     const steps = [];
-    let s = { par: h.par, shot: 1, rem: h.yd, lie: 'tee', haz: (h.par === 3 ? h.green : h.tee) || 'none', rec: false };
+    let s = { par: h.par, shot: 1, rem: h.yd, lie: 'tee', haz: (h.par === 3 ? h.green : h.tee) || 'none', rec: false, hazAt: h.hazAt || 0 };
     for (let i = 0; i < 6; i++){
       const r = decide(s);
       steps.push({ shot: s.shot, rem: s.rem, ...r });
@@ -1512,7 +1590,9 @@
     if (s.lie === 'tee' && s.par !== 3){
       if (s.haz === 'water' && ((dist >= 185 && dx > 15) || dx > 30))
         return { pen: 1, next: { rem: rem - Math.min(dist, 180), lie: 'fw' } };
-      if (s.haz === 'bunker' && dist >= 185 && Math.abs(dx) > 14 && R01() < .5)
+      if (s.haz === 'bunker' && s.hazAt && Math.abs(dist - s.hazAt) < 12 && Math.abs(dx) < 12)
+        return { pen: 0, next: { rem: rem - dist, lie: 'bunker' } };
+      if (s.haz === 'bunker' && !s.hazAt && dist >= 185 && Math.abs(dx) > 14 && R01() < .5)
         return { pen: 0, next: { rem: rem - dist, lie: 'bunker' } };
       return landAt(dx, dist - rem, s, 'none');
     }
@@ -1629,11 +1709,94 @@
   fillCourseSelect();
   function pickHole(){
     const h = COURSES[cState.course] && COURSES[cState.course].holes[cState.hole];
+    cState.hazAt = (h && h.hazAt) || 0;
     if (h) Object.assign(cState, { par: h.par, shot: 1, rem: h.yd, lie: 'tee', haz: (h.par === 3 ? h.green : h.tee) || 'none', rec: false });
     saveC(); syncCaddyButtons(); renderCaddy();
   }
   $('cCourse').addEventListener('change', e => { cState.course = +e.target.value; cState.hole = -1; fillCourseSelect(); pickHole(); });
   $('cHole').addEventListener('change', e => { cState.hole = +e.target.value; pickHole(); });
+  // ----- ホールの線画を描く -----
+  function holeMap(){
+    const course = COURSES[cState.course];
+    const h = course && course.holes[cState.hole];
+    const m = h && MAPS[course.key] && MAPS[course.key][h.no];
+    return m ? { course, h, m } : null;
+  }
+  function drawMap(){
+    const hm = holeMap();
+    if (!hm) return;
+    const { h, m } = hm;
+    // 中心線の長さ＝このティーの距離 になるよう全体を伸び縮み
+    let L = 0;
+    for (let i = 1; i < m.path.length; i++) L += Math.hypot(m.path[i][0] - m.path[i - 1][0], m.path[i][1] - m.path[i - 1][1]);
+    const k = h.yd / L;
+    const S = ([x, y]) => [x * k, y * k];
+    const pts = m.path.map(S);
+    const at = d => {   // ティーから中心線に沿って d ヤードの点と、その向き
+      let rest = Math.max(0, d);
+      for (let i = 1; i < pts.length; i++){
+        const [x0, y0] = pts[i - 1], [x1, y1] = pts[i], l = Math.hypot(x1 - x0, y1 - y0);
+        if (rest <= l || i === pts.length - 1){
+          const t = Math.min(1, rest / l);
+          return { x: x0 + (x1 - x0) * t, y: y0 + (y1 - y0) * t, dx: (x1 - x0) / l, dy: (y1 - y0) / l };
+        }
+        rest -= l;
+      }
+    };
+    const f = n => n.toFixed(1);
+    const g = S([m.green[0], m.green[1]]);
+    const xs = pts.map(p => p[0]).concat(g[0]), ys = pts.map(p => p[1]).concat(g[1]);
+    m.bunkers.forEach(b => { xs.push(b[0] * k); ys.push(b[1] * k); });
+    const minX = Math.min(...xs) - m.fw / 2 - 45, maxX = Math.max(...xs) + m.fw / 2 + 45;
+    const minY = Math.min(...ys) - 38, maxY = Math.max(...ys) + 28;
+    const svg = $('mapSvg');
+    svg.setAttribute('viewBox', `${f(minX)} ${f(-maxY)} ${f(maxX - minX)} ${f(maxY - minY)}`);
+    const line = pts.map(p => `${f(p[0])},${f(-p[1])}`).join(' ');
+    let s = '';
+    // ラフ・フェアウェイ
+    s += `<polyline points="${line}" fill="none" stroke="#16301d" stroke-width="${m.fw + 46}" stroke-linecap="round" stroke-linejoin="round"/>`;
+    s += `<polyline points="${line}" fill="none" stroke="#2f6e3c" stroke-width="${m.fw}" stroke-linecap="round" stroke-linejoin="round"/>`;
+    // 林（中心線の横に木を並べる）
+    if (m.trees){
+      const side = m.trees === 'right' ? 1 : -1;
+      for (let d = 20; d < h.yd - 10; d += 22){
+        const p = at(d), off = m.fw / 2 + 30;
+        const tx = p.x + side * p.dy * off, ty = p.y - side * p.dx * off;
+        s += `<circle cx="${f(tx)}" cy="${f(-ty)}" r="8" fill="#1f4a2a" stroke="#3d7a4a" stroke-width="1"/>`;
+      }
+    }
+    // 池・川、バンカー、グリーン、ティー
+    (m.water || []).forEach(w => { const [x, y] = S([w[0], w[1]]);
+      s += `<rect x="${f(x - w[2] / 2)}" y="${f(-y - w[3] / 2)}" width="${w[2]}" height="${w[3]}" rx="3" fill="#2b6fa8"/>`; });
+    m.bunkers.forEach(b => { const [x, y] = S([b[0], b[1]]);
+      s += `<circle cx="${f(x)}" cy="${f(-y)}" r="${b[2]}" fill="#d9cfa6"/>`; });
+    s += `<ellipse cx="${f(g[0])}" cy="${f(-g[1])}" rx="${m.green[2]}" ry="${m.green[3]}" fill="#5fbf6a" stroke="#9be3a4" stroke-width="1"/>`;
+    s += `<circle cx="${f(g[0])}" cy="${f(-g[1])}" r="1.6" fill="#fff"/><line x1="${f(g[0])}" y1="${f(-g[1])}" x2="${f(g[0])}" y2="${f(-g[1] - 11)}" stroke="#fff" stroke-width="1"/>`;
+    s += `<rect x="-6" y="-3" width="12" height="6" rx="1.5" fill="#c9d1d9"/>`;
+    // 残り距離の目安（150・100y）
+    [150, 100].forEach(r => { if (r < h.yd - 30){ const p = at(h.yd - r);
+      s += `<text x="${f(p.x - m.fw / 2 - 4)}" y="${f(-p.y + 3)}" font-size="9" fill="#8a929b" text-anchor="end">残${r}</text>`;
+      s += `<line x1="${f(p.x - m.fw / 2)}" y1="${f(-p.y)}" x2="${f(p.x - m.fw / 2 + 6)}" y2="${f(-p.y)}" stroke="#8a929b" stroke-width="1"/>`; } });
+    // 攻め方：狙う所とぶれの範囲
+    const steps = planHole(h);
+    let prev = { x: 0, y: 0 }, dist = 0;
+    steps.forEach((st, i) => {
+      let p, len;
+      if (st.green){ p = { x: g[0], y: g[1], dx: 0, dy: 1 }; len = st.rem; }
+      else { dist += st.adv; p = at(dist); len = st.adv; }
+      const club = st.club, kind = club === '1W' ? 'drv' : WOODS.includes(club) ? 'wood' : ['54', '58'].includes(club) ? 'wedge' : 'iron';
+      const rx = AM.lat[kind] * len, ry = AM.len * len;
+      const ang = Math.atan2(p.dx, p.dy) * 180 / Math.PI;
+      s += `<line x1="${f(prev.x)}" y1="${f(-prev.y)}" x2="${f(p.x)}" y2="${f(-p.y)}" stroke="#ffe14a" stroke-width="1.4" stroke-dasharray="4 3"/>`;
+      s += `<ellipse cx="${f(p.x)}" cy="${f(-p.y)}" rx="${f(rx)}" ry="${f(ry)}" transform="rotate(${f(ang)} ${f(p.x)} ${f(-p.y)})" fill="rgba(255,225,74,.08)" stroke="#ffe14a" stroke-width="1" stroke-dasharray="3 2"/>`;
+      s += `<circle cx="${f(p.x)}" cy="${f(-p.y)}" r="6.5" fill="#ffe14a"/><text x="${f(p.x)}" y="${f(-p.y + 3.4)}" font-size="9.5" fill="#000" text-anchor="middle">${st.shot}</text>`;
+      const lx = p.x + (m.trees === 'right' ? -1 : 1) * (Math.max(rx, 8) + 4);
+      s += `<text x="${f(lx)}" y="${f(-p.y + 3.5)}" font-size="10.5" fill="#ffe14a" text-anchor="${m.trees === 'right' ? 'end' : 'start'}">${NM(club)} ${st.green ? 'グリーン' : D(club) + 'y'}</text>`;
+      prev = p;
+    });
+    svg.innerHTML = s;
+    $('mapTitle').textContent = `${h.no}番 Par${h.par} ${h.yd}y`;
+  }
   $('cNext').addEventListener('click', () => {
     const course = COURSES[cState.course];
     if (!course) return;
