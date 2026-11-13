@@ -697,7 +697,7 @@
         <button id="setReset">初期値に戻す</button>
         <button id="setDone">完了</button>
       </div>
-      <div class="ver">バージョン 1.6.1</div>
+      <div class="ver">バージョン 1.6.2</div>
     </div>
   </div>
 </main>
@@ -1381,11 +1381,13 @@
   //   返り値 { club, adv(進む距離), green(グリーンに乗せに行くか), target, task, appr(アプローチタブへ) }
   function decide(s){
     const rem = s.rem;
-    const left = s.par - s.shot + 1;                 // ボギーオンまでに使える打数（この1打を含む）
+    // ボギーオン＝（Par−1）打目までにグリーンに乗せる（Par3は2打目、Par4は3打目、Par5は4打目）
+    const left = s.par - s.shot;                     // ボギーオンまでに使える打数（この1打を含む）
     const lastChance = left <= 1;
     const R = (club, adv, green, target, task, extra = {}) => ({ club, adv, green, target, task, ...extra });
     const after = a => Math.max(0, Math.round(rem - a));
-    const okMsg = lastChance ? 'ここで乗せればボギーオン。' : `外しても次で乗せればボギーオン（あと${left}打で乗せる）。`;
+    const okMsg = left <= 0 ? 'ボギーオンは過ぎた。ここで確実に乗せて、ダブルボギーで止める。'
+      : lastChance ? 'ここで乗せればボギーオン。' : `外しても次で乗せればボギーオン（${s.par - 1}打目までに乗せる）。`;
     const trouble = ['bunker', 'deep', 'slope'].includes(s.lie);
 
     // ---- 60y以内：アプローチ（バンカーは出すだけ） ----
@@ -1618,7 +1620,7 @@
         s = { par: s.par, shot: Math.min(strokes + 1, 9), rem: Math.round(o.next.rem), lie: o.next.lie, haz: frontHaz, rec: !!o.pen };
         if (i === 11) strokes += 2;
       }
-      if (onAt && onAt <= start.par) bogeyOn++;
+      if (onAt && onAt <= start.par - 1) bogeyOn++;
       if (strokes <= start.par + 1) bogey++; else dbl++;
       total += strokes;
     }
@@ -1682,7 +1684,7 @@
     }
     const steps = planHole(h);
     const on = steps[steps.length - 1];
-    const okOn = on.green && on.shot <= h.par;
+    const okOn = on.green && on.shot <= h.par - 1;
     $('cPlan').innerHTML =
       `<div class="hd">${h.no}番 Par${h.par} ${h.yd}y の攻め方${h.memo ? '（' + h.memo + '）' : ''}</div>` +
       steps.map(st => `<div><b>${st.shot}打目</b> 残り${st.rem}y：<b>${LABEL(st.club)}</b> → ${st.target}</div>`).join('') +
