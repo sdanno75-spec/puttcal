@@ -292,13 +292,27 @@
   .base-grid .cl{font-size:15px;font-weight:900}
   .base-grid .cl small{display:block;font-size:10px;color:var(--sub);font-weight:700}
   .ver{text-align:center;font-size:11px;color:var(--sub)}
+  .base-grid .own{display:block;margin-top:3px;border:1px solid var(--green);background:#0d1f14;color:var(--green);font-family:inherit;font-size:10.5px;font-weight:800;border-radius:999px;padding:2px 8px}
+  .base-grid .own.off{border-color:#3a3f46;background:transparent;color:#7d858e}
+  .set-ctrl.dim{opacity:.35}
+  .tip-cat{margin-bottom:10px}
+  .tip-h{font-size:13px;font-weight:900;color:var(--yellow);margin-bottom:4px}
+  .tip-it{display:grid;grid-template-columns:24px 1fr auto;gap:6px;align-items:start;font-size:12.5px;line-height:1.45;padding:3px 0;border-bottom:1px solid #23262b}
+  .tip-it input{width:20px;height:20px;margin-top:1px;accent-color:var(--green)}
+  .tip-del{border:none;background:transparent;color:#ff8f8f;font-size:18px;line-height:1;padding:0 4px}
+  .tip-none{font-size:12px;color:#7d858e;padding:2px 0}
+  .tip-add{display:grid;grid-template-columns:1fr auto;gap:6px;margin-top:5px}
+  .tip-add input{min-width:0;height:36px;border-radius:8px;border:1px solid #33373d;background:#0b0c0d;color:var(--text);font-family:inherit;font-size:16px;padding:0 8px;user-select:text;-webkit-user-select:text}
+  .tip-add button{height:36px;border-radius:8px;border:1px solid var(--green);background:#0d1f14;color:var(--green);font-family:inherit;font-weight:800;font-size:13px;padding:0 12px}
 
   /* ---------- キャディ ---------- */
   .tabs{grid-template-columns:1fr 1fr 1fr}
   .c-course{display:grid;grid-template-columns:1.4fr 1fr auto;gap:6px}
   .c-next{min-width:58px;border-radius:10px;border:1px solid var(--yellow);background:var(--yellow);color:#000;font-family:inherit;font-weight:900;font-size:14px}
   .c-next:disabled{background:var(--panel2);border-color:#33373d;color:#5d646c}
-  .c-course{grid-template-columns:1.4fr 1fr auto}
+  .c-course{grid-template-columns:.72fr 1fr 1fr auto;gap:4px}
+  .c-course select{font-size:13px;padding:0 0 0 5px}
+  .c-course .c-next{min-width:48px;font-size:13px}
   .c-map{min-width:44px;background:#fff;border-color:#fff}
   .map-sheet{
     width:100%;max-width:520px;background:#0b0f0c;border:1px solid var(--line);border-top:none;
@@ -362,6 +376,10 @@
   .c-plan{flex:1 1 0;min-height:0;overflow-y:auto;-webkit-overflow-scrolling:touch;font-size:12px;line-height:1.45;color:var(--sub);
           border-top:1px dashed #2c2f34;padding-top:4px}
   .c-plan:empty{display:none}
+  /* 結果は画面に入りきらないとき、この中だけ指で上下に動かせる（下が見切れない） */
+  .pane > .c-result{overflow-y:auto;-webkit-overflow-scrolling:touch;overscroll-behavior:contain}
+  .c-result .c-plan{flex:none;overflow:visible}
+  .c-result > *{flex-shrink:0}
   .c-plan b{color:var(--text)}
   .c-plan .hd{color:var(--yellow);font-weight:800}
   .c-plan .ok{color:var(--green);font-weight:800}
@@ -412,6 +430,7 @@
   <div class="pane" id="paneCaddy">
     <section class="c-course">
       <select id="cCourse" aria-label="コース"></select>
+      <select id="cTee" aria-label="ティー"></select>
       <select id="cHole" aria-label="ホール"></select>
       <button id="cNext" class="c-next" disabled>次 ▶</button>
     </section>
@@ -442,7 +461,7 @@
       <button data-v="water">池・OB</button>
       <button id="cRec" class="rec">直前OB・池</button>
     </section>
-    <section class="result c-result" aria-live="polite">
+    <section class="result c-result scroll" aria-live="polite">
       <div class="c-club">
         <div class="label">推奨クラブ</div>
         <span class="num" id="cClub">1W</span><span class="sub" id="cClubSub">215y</span>
@@ -691,13 +710,18 @@
       <div class="set-row">
         <div class="label">キャディ：番手ごとの距離（トータル）</div>
         <div class="base-grid" id="caddyGrid"></div>
-        <div class="set-note">キャディの判断に使う距離です。初期値は目安なので、自分の数字に合わせてください。3U・4U は使用禁止のため入っていません。</div>
+        <div class="set-note">キャディの判断に使う距離です。初期値は目安なので、自分の数字に合わせてください。持っていないクラブは「持っていない」にすると、判断に使いません。</div>
+      </div>
+      <div class="set-row">
+        <div class="label">キャディ：気を付けること（チェックした項目だけ表示）</div>
+        <div id="tipGrid"></div>
+        <div class="set-note">バンカーのときはバンカーの項目、ドライバーやアイアンを使う場面ではその項目が、キャディ画面の下に出ます。自分で書き足した項目は「×」で消せます。</div>
       </div>
       <div class="sheet-actions">
         <button id="setReset">初期値に戻す</button>
         <button id="setDone">完了</button>
       </div>
-      <div class="ver">バージョン 1.6.2</div>
+      <div class="ver">バージョン 1.8.0</div>
     </div>
   </div>
 </main>
@@ -727,6 +751,8 @@
     { id: '5W', name: '5W',  def: 180, note: '完璧なFW・前方ハザードなしのみ' },
     { id: '7W', name: '7W',  def: 172, note: '160〜175yの主力' },
     { id: '9W', name: '9W',  def: 163, note: '160〜175yの主力' },
+    { id: '3U', name: '3U',  def: 185, note: 'ユーティリティ' },
+    { id: '4U', name: '4U',  def: 175, note: 'ユーティリティ' },
     { id: '6I', name: '6I',  def: 150, note: 'i500' },
     { id: '7I', name: '7I',  def: 140, note: 'i500' },
     { id: '8I', name: '8I',  def: 130, note: 'i500' },
@@ -739,7 +765,8 @@
   const DEFAULTS = { stimp: 9.75, bpm: 75, margin: 2, c58: 20, c54: 24, cUW: 28, cPW: 32, c9I: 36 };
   const LIMITS = { stimp: [6, 14], bpm: [50, 120], margin: [0, 6],
                    c58: [5, 60], c54: [5, 60], cUW: [5, 60], cPW: [5, 60], c9I: [5, 60] };
-  CC.forEach(c => { DEFAULTS['d' + c.id] = c.def; LIMITS['d' + c.id] = [30, 300]; });
+  CC.forEach(c => { DEFAULTS['d' + c.id] = c.def; LIMITS['d' + c.id] = [30, 300];
+    DEFAULTS['h' + c.id] = ['7W', '9W'].includes(c.id) ? 0 : 1; LIMITS['h' + c.id] = [0, 1]; });   // h＝持っている(1)/持っていない(0)
   const cfg = { ...DEFAULTS };
   try {
     const c = JSON.parse(localStorage.getItem('apc-cfg') || '{}');
@@ -970,6 +997,9 @@
     $('marginVal').textContent = cfg.margin.toFixed(1);
     CLUBS.forEach(c => { $('base_' + c.id).textContent = cfg[c.id]; });
     CC.forEach(c => { $('dist_' + c.id).textContent = cfg['d' + c.id]; });
+    document.querySelectorAll('[data-own]').forEach(b => { const on = cfg['h' + b.dataset.own] !== 0;
+      b.textContent = on ? '持っている' : '持っていない'; b.classList.toggle('off', !on);
+      b.closest('.cl').nextElementSibling.classList.toggle('dim', !on); });
   }
   function saveCfg(){ try { localStorage.setItem('apc-cfg', JSON.stringify(cfg)); } catch(e){} }
   function changeCfg(key, d){
@@ -987,12 +1017,15 @@
     </div>`).join('');
   // キャディ：番手ごとの距離の行
   $('caddyGrid').innerHTML = CC.map(c => `
-    <div class="cl">${c.name}<small>${c.note}</small></div>
+    <div class="cl">${c.name}<small>${c.note}</small><button class="own" data-own="${c.id}"></button></div>
     <div class="set-ctrl sm">
       <button data-set="d${c.id}" data-d="-1">−</button>
       <div class="set-val"><span id="dist_${c.id}">${cfg['d' + c.id]}</span><small>y</small></div>
       <button data-set="d${c.id}" data-d="1">＋</button>
     </div>`).join('');
+  document.querySelectorAll('[data-own]').forEach(b => b.addEventListener('click', () => {
+    const k = 'h' + b.dataset.own; cfg[k] = cfg[k] === 0 ? 1 : 0; showCfg(); saveCfg(); render();
+  }));
   document.querySelectorAll('[data-set]').forEach(b => {
     let t1, t2;
     const fire = () => changeCfg(b.dataset.set, parseFloat(b.dataset.d));
@@ -1308,7 +1341,7 @@
       1: { tee: 'bunker', green: 'bunker', memo: '右は林、FW中央にバンカー、グリーン右手前にバンカー' },
     };
     for (const [tee, yds] of Object.entries(TEES))
-      COURSES.push({ name: `都GC ${tee}`, key: 'miyako', tee, holes: PAR.map((par, i) => ({
+      COURSES.push({ name: `都GC ${tee}`, group: '都ゴルフ倶楽部', short: '都GC', key: 'miyako', tee, holes: PAR.map((par, i) => ({
         no: i + 1, par, yd: yds[i], tee: 'none', green: 'none',
         ...(HAZ[i + 1] || {}),
         memo: `${i < 9 ? 'OUT' : 'IN'}・HDCP${HDCP[i]}` + (HAZ[i + 1] ? '・' + HAZ[i + 1].memo : '') })) });
@@ -1354,24 +1387,30 @@
   const NM = id => (CC.find(c => c.id === id) || {}).name || id;
   const I500 = ['6I', '7I', '8I', '9I', 'PW', 'UW'];
   const LABEL = id => (I500.includes(id) ? 'i500 ' : '') + NM(id);
-  const SHORT_FIRST = ['58', '54', 'UW', 'PW', '9I', '8I', '7I', '6I'];   // アイアン・ウェッジ（短い順）
+  const has = id => cfg['h' + id] !== 0;             // そのクラブを持っているか
+  const SHORT_FIRST_ALL = ['58', '54', 'UW', 'PW', '9I', '8I', '7I', '6I'];   // アイアン・ウェッジ（短い順）
+  let SHORT_FIRST = SHORT_FIRST_ALL.filter(has);
+  // 160〜185y を運ぶショートウッド・ユーティリティ（持っているものだけ、短い順）
+  const midClubs = () => ['9W', '7W', '4U', '3U'].filter(has).sort((a, b) => D(a) - D(b));
+  const tee1 = () => has('1W') ? '1W' : (['5W', '3U', '7W', '4U', '9W'].find(has) || '6I');
   const HAZ_NAME = { bunker: 'バンカー', water: '池・OB' };
 
   // グリーンに届く一番短い番手（i500・ウェッジ）。届かなければ null
   function fitGreen(rem, extra = 0){
+    SHORT_FIRST = SHORT_FIRST_ALL.filter(has);
     for (const id of SHORT_FIRST) if (D(id) >= rem + extra - 3) return id;
     return null;
   }
   // maxY 以下で一番遠くへ行く番手（list の中から）
   function longestUnder(maxY, list){
     let best = null;
-    for (const id of list) if (D(id) <= maxY && (!best || D(id) > D(best))) best = id;
+    for (const id of list) if (has(id) && D(id) <= maxY && (!best || D(id) > D(best))) best = id;
     return best;
   }
   // 残り100y（UWのフルショット）を残すレイアップ。maxId より長い番手は使わない
   function layupClub(rem, maxId){
     const IR = ['UW', 'PW', '9I', '8I', '7I', '6I'];     // 刻みはi500（ウェッジは使わない）
-    const list = IR.slice(0, IR.indexOf(maxId) + 1);
+    const list = IR.slice(0, IR.indexOf(maxId) + 1).filter(has);
     const want = rem - D('UW');
     for (const id of list) if (D(id) >= want - 5) return id;
     return maxId;
@@ -1445,20 +1484,22 @@
       }
       // 図から分かるFWバンカーまでの距離：1Wが届いてしまうなら、手前で止まるショートウッド
       if (s.hazAt && s.haz !== 'none' && Math.abs(D('1W') - s.hazAt) < 25){
-        const c = longestUnder(s.hazAt - 20, ['7W', '9W']) || longestUnder(s.hazAt - 20, SHORT_FIRST) || '9W';
+        const c = longestUnder(s.hazAt - 20, midClubs()) || longestUnder(s.hazAt - 20, SHORT_FIRST) || '6I';
         return R(c, D(c), false, `FWバンカー（約${s.hazAt}y）の手前のフェアウェイ`,
           `1Wだと約${s.hazAt}yのFWバンカーに届く。${LABEL(c)}で${D(c)}y、手前で止める。残り${after(D(c))}y。`);
       }
       if (s.haz === 'water'){
-        return R('7W', D('7W'), false, '池・OBの手前の広いフェアウェイ',
-          `1Wの落とし所に池・OBがあるので7Wで${D('7W')}y。届かない距離で止める。残り${after(D('7W'))}y。`);
+        const c = longestUnder(D('1W') - 30, midClubs()) || (has('5W') ? '5W' : '6I');
+        return R(c, D(c), false, '池・OBの手前の広いフェアウェイ',
+          `1Wの落とし所に池・OBがあるので${NM(c)}で${D(c)}y。届かない距離で止める。残り${after(D(c))}y。`);
       }
       const side = s.haz === 'bunker' ? 'バンカーと反対側のフェアウェイ' : 'フェアウェイの広い側（OBから遠い側）';
       if (rem <= D('1W') - 20){
-        const c = fitGreen(rem) || longestUnder(rem - 10, ['9W', '7W', '5W', ...SHORT_FIRST].filter(x => x !== '5W'));
+        const c = fitGreen(rem) || longestUnder(rem - 10, [...midClubs(), ...SHORT_FIRST]) || '6I';
         return R(c, Math.min(D(c), rem), !!fitGreen(rem), 'グリーン手前のフェアウェイ', `短いホール。1Wは使わず${LABEL(c)}で刻む。`);
       }
-      return R('1W', D('1W'), false, side, `1Wで${D('1W')}y。残り${after(D('1W'))}y。曲げない振り幅で、フェアウェイに置くことだけ。`);
+      const t1 = tee1();
+      return R(t1, D(t1), false, side, `${NM(t1)}で${D(t1)}y。残り${after(D(t1))}y。曲げない振り幅で、フェアウェイに置くことだけ。`);
     }
 
     // ---- STEP1：150y以下はi500でグリーンへ ----
@@ -1481,7 +1522,7 @@
       return R('6I', D('6I'), false, 'グリーン手前の花道', `i500 6Iで花道まで。残り${after(D('6I'))}yを寄せる。` + okMsg);
     }
     // FW完璧：160〜175yは 9W/7W、176〜185yは 5W（前方ハザードなしのみ）
-    const woods = ['9W', '7W'].concat(s.haz === 'none' ? ['5W'] : []);
+    const woods = midClubs().concat(s.haz === 'none' && has('5W') ? ['5W'] : []).sort((a, b) => D(a) - D(b));
     const wood = woods.find(id => D(id) >= rem - 3);
     if (wood && (lastChance || s.haz === 'none')){
       return R(wood, rem, true, s.haz === 'none' ? 'グリーン中央' : `グリーン中央（手前の${HAZ_NAME[s.haz]}を越える）`,
@@ -1490,7 +1531,7 @@
     // 届かない or ハザードあり：i500でレイアップ（残り100yを作る）
     if (!lastChance){
       const c = layupClub(rem, rem > D('8I') + D('6I') && s.haz === 'none' && left <= 2 ? '6I' : '8I');
-      if (rem - D(c) > D('6I') + 3 && left <= 2 && s.haz === 'none' && s.lie === 'fw'){
+      if (has('5W') && rem - D(c) > D('6I') + 3 && left <= 2 && s.haz === 'none' && s.lie === 'fw'){
         return R('5W', D('5W'), false, 'フェアウェイ中央（前方ハザードなし）',
           `FW完璧・ハザードなしなので5Wで${D('5W')}y前進。残り${after(D('5W'))}y。`);
       }
@@ -1498,7 +1539,7 @@
         `ボギーオンには刻めば足りる。${LABEL(c)}で${D(c)}y、残り${after(D(c))}y。`);
     }
     // 最後の1打なのに届かない：大叩きを防ぐ
-    const c = s.haz === 'none' ? '5W' : '8I';
+    const c = s.haz === 'none' ? ([...midClubs(), '5W'].filter(has).sort((a, b) => D(b) - D(a))[0] || '6I') : '8I';
     return R(c, D(c), false, 'グリーン手前の広い所', `ボギーオンは無理な距離。${NM(c)}で前進して、ダブルボギーで止める。残り${after(D(c))}y。`);
   }
 
@@ -1530,7 +1571,7 @@
     woodMis: .06,                                            // 地面から打つウッドはミスが増える
     gW: 12.5, gD: 15,                                        // グリーンの半分の幅・奥行き(y)
   };
-  const WOODS = ['1W', '5W', '7W', '9W'];
+  const WOODS = ['1W', '5W', '7W', '9W', '3U', '4U'];
   const N_SIM = 2500;
   let R01 = Math.random;
   function seedRng(seed){
@@ -1630,11 +1671,12 @@
   // 「攻めた場合」の1打：届く番手でグリーンを直接狙う（ルールを無視した場合）
   function aggressive(s){
     if (s.rem <= 60) return null;
-    if (s.lie === 'tee' && s.par !== 3) return { club: '1W', green: false, adv: D('1W') };
-    const all = ['58', '54', 'UW', 'PW', '9I', '8I', '7I', '6I', '9W', '7W', '5W'];
+    if (s.lie === 'tee' && s.par !== 3){ const t = tee1(); return { club: t, green: false, adv: D(t) }; }
+    const all = ['58', '54', 'UW', 'PW', '9I', '8I', '7I', '6I', '9W', '7W', '4U', '5W', '3U'].filter(has).sort((a, b) => D(a) - D(b));
     const c = all.find(id => D(id) >= s.rem - 3);
     if (c) return { club: c, green: true, adv: s.rem };
-    return { club: '5W', green: false, adv: D('5W') };
+    const far = all[all.length - 1];
+    return { club: far, green: false, adv: D(far) };
   }
 
   // ----- 画面 -----
@@ -1645,17 +1687,25 @@
   } catch(e){}
   const saveC = () => { try { localStorage.setItem('apc-caddy', JSON.stringify({ course: cState.course, hole: cState.hole })); } catch(e){} };
 
+  // コース → ティー → ホール の順に選ぶ（COURSES は「コース×ティー」ごとに1つ）
+  const groupOf = c => c.group || c.name;
+  const GROUPS = [...new Set(COURSES.map(groupOf))];
   function fillCourseSelect(){
-    const cs = $('cCourse'), hs = $('cHole');
-    cs.innerHTML = COURSES.length
-      ? `<option value="-1">自由入力</option>` + COURSES.map((c, i) => `<option value="${i}">${c.name}</option>`).join('')
-      : `<option value="-1">コース未登録（自由入力）</option>`;
-    cs.value = cState.course;
+    const cs = $('cCourse'), ts = $('cTee'), hs = $('cHole');
     const course = COURSES[cState.course];
+    cs.innerHTML = COURSES.length
+      ? '<option value="">自由入力</option>' + GROUPS.map(g => `<option value="${g}">${(COURSES.find(c => groupOf(c) === g) || {}).short || g}</option>`).join('')
+      : '<option value="">コース未登録（自由入力）</option>';
+    cs.value = course ? groupOf(course) : '';
+    ts.disabled = !course;
+    ts.innerHTML = course
+      ? COURSES.map((c, i) => groupOf(c) === groupOf(course) ? `<option value="${i}">${c.tee || '標準'}</option>` : '').join('')
+      : '<option value="-1">ティー</option>';
+    ts.value = course ? cState.course : -1;
     hs.disabled = !course;
     hs.innerHTML = course
-      ? `<option value="-1">ホール</option>` + course.holes.map((h, i) => `<option value="${i}">${h.no}番 Par${h.par} ${h.yd}y</option>`).join('')
-      : `<option value="-1">ホール</option>`;
+      ? '<option value="-1">ホール</option>' + course.holes.map((h, i) => `<option value="${i}">${h.no}番 ${h.yd}y</option>`).join('')
+      : '<option value="-1">ホール</option>';
     hs.value = cState.hole;
   }
   function syncCaddyButtons(){
@@ -1666,8 +1716,89 @@
     $('cHazLabel').textContent = cState.lie === 'tee' && cState.par !== 3 ? '落とし所' : '前方';
     $('cRemInput').value = cState.rem;
   }
+  // ----- 気を付けること（チェックリスト） -----
+  //  items：用意した項目（バンカーは動画の題名・目次をもとにまとめたもの）。ドライバー・アイアンは今後追加
+  //  設定で「表示する項目」を選べる。自分で書いた項目も足せる（この端末に保存）
+  const TIPS = {
+    fwBunker: { name: 'フェアウェイバンカー', items: [
+      'アドレスで作った手首の角度を、最後までほどかない（ほどけるとダフる）',
+      'ヘッドは砂につけず、少し浮かせて構える。素振りも浮かせたまま',
+      'ボールはふだんよりやや右、グリップは少し短く、足は軽く砂に埋める',
+      'ハードルを下げる：アゴを越える番手で、目いっぱい飛ばそうとしない',
+    ] },
+    greenBunker: { name: 'グリーン周りのバンカー', items: [
+      'コックを使ってクラブを上げ、力を抜いてヘッドを走らせる（緩めるのとは違う。最後まで振り抜く）',
+      '上から打ち込まなくていい。5cm手前を狙う、とこだわらなくていい。ヘッドが砂の下を通ればボールは出る',
+      'フェースを返す動き（フリップ）とも相性がいい',
+      '距離は振り幅で打ち分ける。まずは1回で出すことだけ',
+    ] },
+    driver: { name: 'ドライバー', items: [] },
+    iron:   { name: 'アイアン',   items: [] },
+  };
+  // 保存：{ off: { cat: [消した項目の文] }, mine: { cat: [自分で書いた項目] } }
+  const tipSave = { off: {}, mine: {} };
+  try { Object.assign(tipSave, JSON.parse(localStorage.getItem('apc-tips') || '{}')); } catch(e){}
+  const saveTips = () => { try { localStorage.setItem('apc-tips', JSON.stringify(tipSave)); } catch(e){} };
+  const allTips = cat => TIPS[cat].items.concat(tipSave.mine[cat] || []);
+  const tipOn = (cat, t) => !(tipSave.off[cat] || []).includes(t);
+  let lastClub = '';
+  function tipCat(){
+    if (cState.lie === 'bunker') return cState.rem > 60 ? 'fwBunker' : 'greenBunker';
+    if (lastClub === '1W') return 'driver';
+    if (I500.includes(lastClub)) return 'iron';
+    return '';
+  }
+  function bunkerTip(){
+    const cat = tipCat();
+    if (!cat) return '';
+    const list = allTips(cat).filter(t => tipOn(cat, t));
+    if (!list.length) return '';
+    return `<div class="hd">気を付けること（${TIPS[cat].name}）</div>` +
+      list.map(t => '<div>・' + esc(t) + '</div>').join('') + '<div style="height:6px"></div>';
+  }
+  const esc = t => String(t).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
+  // 設定画面のチェックリスト
+  function drawTipSettings(){
+    $('tipGrid').innerHTML = Object.entries(TIPS).map(([cat, c]) => {
+      const list = allTips(cat);
+      return `<div class="tip-cat"><div class="tip-h">${c.name}</div>` +
+        (list.length ? list.map((t, i) => {
+          const mine = i >= c.items.length;
+          return `<label class="tip-it"><input type="checkbox" data-tip="${cat}" data-i="${i}"${tipOn(cat, t) ? ' checked' : ''}>` +
+            `<span>${esc(t)}</span>${mine ? `<button class="tip-del" data-del="${cat}" data-i="${i - c.items.length}" aria-label="消す">×</button>` : ''}</label>`;
+        }).join('') : '<div class="tip-none">まだ項目がありません</div>') +
+        `<div class="tip-add"><input type="text" maxlength="80" placeholder="自分で書き足す" data-addin="${cat}"><button data-add="${cat}">追加</button></div></div>`;
+    }).join('');
+  }
+  $('tipGrid').addEventListener('change', e => {
+    const b = e.target.closest('[data-tip]');
+    if (!b) return;
+    const cat = b.dataset.tip, t = allTips(cat)[+b.dataset.i];
+    const off = new Set(tipSave.off[cat] || []);
+    if (b.checked) off.delete(t); else off.add(t);
+    tipSave.off[cat] = [...off];
+    saveTips(); renderCaddy();
+  });
+  $('tipGrid').addEventListener('click', e => {
+    const add = e.target.closest('[data-add]'), del = e.target.closest('[data-del]');
+    if (add){
+      const cat = add.dataset.add, inp = document.querySelector(`[data-addin="${cat}"]`);
+      const t = inp.value.trim();
+      if (!t) return;
+      (tipSave.mine[cat] = tipSave.mine[cat] || []).push(t);
+      saveTips(); drawTipSettings(); renderCaddy();
+    } else if (del){
+      e.preventDefault();
+      const cat = del.dataset.del;
+      (tipSave.mine[cat] || []).splice(+del.dataset.i, 1);
+      saveTips(); drawTipSettings(); renderCaddy();
+    }
+  });
+  drawTipSettings();
+
   function renderCaddy(){
     const r = decide(cState);
+    lastClub = r.club;
     $('cClub').textContent = LABEL(r.club);
     $('cClubSub').textContent = r.green ? `残り${cState.rem}y` : `${D(r.club)}y 前進`;
     $('cTarget').textContent = r.target;
@@ -1678,14 +1809,14 @@
     $('cNext').disabled = !COURSES[cState.course];
     renderProb(r, h);
     if (!h){
-      $('cPlan').innerHTML = COURSES.length ? '' :
-        '<span class="hd">コースの攻め方</span>：コース情報（ホールごとのPar・距離・ハザード）を送ってもらえれば、ここにホールごとのマネジメントが出ます。';
+      $('cPlan').innerHTML = bunkerTip() + (COURSES.length ? '' :
+        '<span class="hd">コースの攻め方</span>：コース情報（ホールごとのPar・距離・ハザード）を送ってもらえれば、ここにホールごとのマネジメントが出ます。');
       return;
     }
     const steps = planHole(h);
     const on = steps[steps.length - 1];
     const okOn = on.green && on.shot <= h.par - 1;
-    $('cPlan').innerHTML =
+    $('cPlan').innerHTML = bunkerTip() +
       `<div class="hd">${h.no}番 Par${h.par} ${h.yd}y の攻め方${h.memo ? '（' + h.memo + '）' : ''}</div>` +
       steps.map(st => `<div><b>${st.shot}打目</b> 残り${st.rem}y：<b>${LABEL(st.club)}</b> → ${st.target}</div>`).join('') +
       `<div class="${okOn ? 'ok' : 'ng'}">${okOn ? `${on.shot}打目で乗せる＝ボギーオン` : 'ボギーオンは届かない：ダブルボギーで止める'}</div>`;
@@ -1715,7 +1846,14 @@
     if (h) Object.assign(cState, { par: h.par, shot: 1, rem: h.yd, lie: 'tee', haz: (h.par === 3 ? h.green : h.tee) || 'none', rec: false });
     saveC(); syncCaddyButtons(); renderCaddy();
   }
-  $('cCourse').addEventListener('change', e => { cState.course = +e.target.value; cState.hole = -1; fillCourseSelect(); pickHole(); });
+  $('cCourse').addEventListener('change', e => {
+    const g = e.target.value;
+    // コースを選んだら、ティーはレギュラー（なければ最初のティー）
+    let i = COURSES.findIndex(c => groupOf(c) === g && c.tee === 'レギュラー');
+    if (i < 0) i = COURSES.findIndex(c => groupOf(c) === g);
+    cState.course = g ? i : -1; cState.hole = -1; fillCourseSelect(); pickHole();
+  });
+  $('cTee').addEventListener('change', e => { cState.course = +e.target.value; fillCourseSelect(); pickHole(); });
   $('cHole').addEventListener('change', e => { cState.hole = +e.target.value; pickHole(); });
   // ----- ホールの線画を描く -----
   function holeMap(){
@@ -1844,7 +1982,8 @@
     saveA(); renderApproach();
     state.tab = 'approach'; applyTab();
   });
-  syncCaddyButtons();
+  // 前回のコース・ホールを選んだまま開いたら、そのホールの1打目から
+  if (COURSES[cState.course] && COURSES[cState.course].holes[cState.hole]) pickHole(); else syncCaddyButtons();
   window.__caddy = { decide, planHole, COURSES, simulate, aggressive };   // 点検用
 
   // ===== タブ切り替え（起動時はいつもキャディ） =====
