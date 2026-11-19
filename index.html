@@ -291,7 +291,14 @@
   .base-grid{display:grid;grid-template-columns:auto 1fr;gap:6px 10px;align-items:center}
   .base-grid .cl{font-size:15px;font-weight:900}
   .base-grid .cl small{display:block;font-size:10px;color:var(--sub);font-weight:700}
-  .ver{text-align:center;font-size:11px;color:var(--sub)}
+  .ver{text-align:center;font-size:11px;color:var(--sub);display:flex;align-items:center;justify-content:center;gap:8px;flex-wrap:wrap}
+  .ver button{border:1px solid #3a3f46;background:transparent;color:var(--text);font-family:inherit;font-size:11px;font-weight:800;border-radius:999px;padding:4px 10px}
+  .upd-bar{position:fixed;left:8px;right:8px;top:calc(env(safe-area-inset-top) + 6px);z-index:30;display:none;align-items:center;gap:8px;background:#0d1f14;border:1px solid var(--green);border-radius:12px;padding:8px 10px;font-size:13px;font-weight:800;color:var(--text)}
+  .upd-bar.show{display:flex}
+  .upd-bar span{flex:1}
+  .upd-bar button{border:0;border-radius:999px;font-family:inherit;font-weight:900;font-size:13px;padding:7px 12px}
+  .upd-bar .go{background:var(--green);color:#000}
+  .upd-bar .no{background:transparent;color:var(--sub);border:1px solid #3a3f46}
   .base-grid .own{display:block;margin-top:3px;border:1px solid var(--green);background:#0d1f14;color:var(--green);font-family:inherit;font-size:10.5px;font-weight:800;border-radius:999px;padding:2px 8px}
   .base-grid .own.off{border-color:#3a3f46;background:transparent;color:#7d858e}
   .set-ctrl.dim{opacity:.35}
@@ -721,7 +728,7 @@
         <button id="setReset">初期値に戻す</button>
         <button id="setDone">完了</button>
       </div>
-      <div class="ver">バージョン 1.9.0</div>
+      <div class="ver"><span id="verText">バージョン 1.10.0</span><button id="updCheck">最新版を確認</button><span id="updMsg"></span></div>
     </div>
   </div>
 </main>
@@ -2034,6 +2041,56 @@
 
   applyHand();
   render();
+})();
+</script>
+<div class="upd-bar" id="updBar" role="status"><span id="updBarText">新しい版があります</span><button class="go" id="updGo">更新する</button><button class="no" id="updLater">あとで</button></div>
+<script>
+// ===== 新しい版の確認（ホーム画面アプリでも消さずに更新できるように） =====
+(() => {
+  const CUR = '1.10.0';
+  const bar = document.getElementById('updBar');
+  const msg = document.getElementById('updMsg');
+  let latest = null, lastCheck = 0, dismissed = null;
+  const newer = (a, b) => {   // a が b より新しいか
+    const x = a.split('.').map(Number), y = b.split('.').map(Number);
+    for (let i = 0; i < 3; i++) { if ((x[i]||0) !== (y[i]||0)) return (x[i]||0) > (y[i]||0); }
+    return false;
+  };
+  async function check(manual) {
+    if (location.protocol === 'file:') { if (manual) msg.textContent = '確認できません'; return; }
+    lastCheck = Date.now();
+    if (manual) msg.textContent = '確認中…';
+    try {
+      const url = location.pathname.replace(/[^/]*$/, '') + 'index.html?_=' + Date.now();
+      const res = await fetch(url, { cache: 'no-store' });
+      const txt = await res.text();
+      const m = txt.match(/バージョン (\d+\.\d+\.\d+)/);
+      if (!m) { if (manual) msg.textContent = '確認できません'; return; }
+      latest = m[1];
+      if (newer(latest, CUR)) {
+        if (manual || dismissed !== latest) {
+          document.getElementById('updBarText').textContent = '新しい版 ' + latest + ' があります';
+          bar.classList.add('show');
+        }
+        if (manual) msg.textContent = latest + ' があります';
+      } else if (manual) msg.textContent = '最新です';
+    } catch (e) { if (manual) msg.textContent = '通信できません'; }
+  }
+  function reload() {
+    // 古い画面を使わないよう、毎回ちがう住所で読み直す
+    location.replace(location.pathname + '?v=' + (latest || CUR) + '-' + Date.now());
+  }
+  document.getElementById('updGo').addEventListener('click', reload);
+  document.getElementById('updLater').addEventListener('click', () => { dismissed = latest; bar.classList.remove('show'); });
+  document.getElementById('updCheck').addEventListener('click', () => check(true));
+  // 開いたとき、アプリに戻ってきたとき（1分以上あいたら）に確認
+  setTimeout(() => check(false), 1500);
+  document.addEventListener('visibilitychange', () => {
+    if (document.visibilityState === 'visible' && Date.now() - lastCheck > 60000) check(false);
+  });
+  // 住所の ?v=… は読み直し用なので、表示上は消しておく
+  if (location.search.startsWith('?v=')) { try { history.replaceState(null, '', location.pathname); } catch (e) {} }
+  window.__upd = { check, get latest() { return latest; } };
 })();
 </script>
 </body>
