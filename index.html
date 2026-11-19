@@ -310,7 +310,7 @@
   .c-course{display:grid;grid-template-columns:1.4fr 1fr auto;gap:6px}
   .c-next{min-width:58px;border-radius:10px;border:1px solid var(--yellow);background:var(--yellow);color:#000;font-family:inherit;font-weight:900;font-size:14px}
   .c-next:disabled{background:var(--panel2);border-color:#33373d;color:#5d646c}
-  .c-course{grid-template-columns:.72fr 1fr 1fr auto;gap:4px}
+  .c-course{grid-template-columns:.95fr 1.05fr .8fr auto;gap:4px}
   .c-course select{font-size:13px;padding:0 0 0 5px}
   .c-course .c-next{min-width:48px;font-size:13px}
   .c-map{min-width:44px;background:#fff;border-color:#fff}
@@ -721,7 +721,7 @@
         <button id="setReset">初期値に戻す</button>
         <button id="setDone">完了</button>
       </div>
-      <div class="ver">バージョン 1.8.1</div>
+      <div class="ver">バージョン 1.9.0</div>
     </div>
   </div>
 </main>
@@ -1347,6 +1347,22 @@
         ...(HAZ[i + 1] || {}),
         memo: `${i < 9 ? 'OUT' : 'IN'}・HDCP${HDCP[i]}` + (HAZ[i + 1] ? '・' + HAZ[i + 1].memo : '') })) });
   })();
+  // ユニオンエース ゴルフクラブ（埼玉県秩父市）楽天GORAのコース情報より（2026-11-19）。西コース→南コースの順。ハザードは未入力
+  (() => {
+    const PAR  = [4, 5, 4, 3, 4, 4, 5, 3, 4,  4, 3, 4, 4, 4, 5, 3, 4, 5];
+    const HDCP = [5, 1, 9, 4, 7, 3, 8, 2, 6,  3, 8, 1, 6, 5, 9, 7, 2, 4];
+    const TEES = {
+      'レギュラー（白）': [392, 540, 356, 186, 345, 331, 483, 168, 342,  432, 145, 407, 390, 400, 472, 191, 304, 462],
+      'バック（青）':     [405, 552, 372, 209, 365, 356, 493, 225, 355,  448, 175, 429, 405, 454, 487, 208, 324, 482],
+      'レッド（赤）':     [272, 373, 312, 164, 323, 224, 370, 154, 285,  275, 145, 250, 260, 286, 373, 161, 236, 342],
+    };
+    for (const [tee, yds] of Object.entries(TEES))
+      COURSES.push({ name: `ユニオンエース ${tee}`, group: 'ユニオンエース', short: 'ユニオン', key: 'unionace', tee, holes: PAR.map((par, i) => {
+        const label = `${i < 9 ? '西' : '南'}${i % 9 + 1}番`;
+        return { no: i + 1, label, par, yd: yds[i], tee: 'none', green: 'none',
+          memo: `${i < 9 ? '西コース' : '南コース'}・HDCP${HDCP[i]}` };
+      }) });
+  })();
 
   // ----- ホールの線画（レイアウト図を見て、ヤード単位で描き起こしたもの） -----
   //  座標はティー＝(0,0)、上（グリーン方向）が +y、右が +x。単位はヤード（約）
@@ -1700,12 +1716,12 @@
     cs.value = course ? groupOf(course) : '';
     ts.disabled = !course;
     ts.innerHTML = course
-      ? COURSES.map((c, i) => groupOf(c) === groupOf(course) ? `<option value="${i}">${c.tee || '標準'}</option>` : '').join('')
+      ? COURSES.map((c, i) => groupOf(c) === groupOf(course) ? `<option value="${i}">${(c.tee || '標準').replace(/（.*）/, '')}</option>` : '').join('')
       : '<option value="-1">ティー</option>';
     ts.value = course ? cState.course : -1;
     hs.disabled = !course;
     hs.innerHTML = course
-      ? '<option value="-1">ホール</option>' + course.holes.map((h, i) => `<option value="${i}">${h.no}番 ${h.yd}y</option>`).join('')
+      ? '<option value="-1">ホール</option>' + course.holes.map((h, i) => `<option value="${i}">${h.label || h.no + "番"}</option>`).join('')
       : '<option value="-1">ホール</option>';
     hs.value = cState.hole;
   }
@@ -1820,7 +1836,7 @@
     const on = steps[steps.length - 1];
     const okOn = on.green && on.shot <= h.par - 1;
     $('cPlan').innerHTML = bunkerTip() +
-      `<div class="hd">${h.no}番 Par${h.par} ${h.yd}y の攻め方${h.memo ? '（' + h.memo + '）' : ''}</div>` +
+      `<div class="hd">${h.label || h.no + "番"} Par${h.par} ${h.yd}y の攻め方${h.memo ? '（' + h.memo + '）' : ''}</div>` +
       steps.map(st => `<div><b>${st.shot}打目</b> 残り${st.rem}y：<b>${LABEL(st.club)}</b> → ${st.target}</div>`).join('') +
       `<div class="${okOn ? 'ok' : 'ng'}">${okOn ? `${on.shot}打目で乗せる＝ボギーオン` : 'ボギーオンは届かない：ダブルボギーで止める'}</div>`;
   }
@@ -1852,7 +1868,7 @@
   $('cCourse').addEventListener('change', e => {
     const g = e.target.value;
     // コースを選んだら、ティーはレギュラー（なければ最初のティー）
-    let i = COURSES.findIndex(c => groupOf(c) === g && c.tee === 'レギュラー');
+    let i = COURSES.findIndex(c => groupOf(c) === g && c.tee.startsWith('レギュラー'));
     if (i < 0) i = COURSES.findIndex(c => groupOf(c) === g);
     cState.course = g ? i : -1; cState.hole = -1; fillCourseSelect(); pickHole();
   });
